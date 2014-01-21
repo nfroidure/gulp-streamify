@@ -47,7 +47,7 @@ var gStreamify = require('gulp-streamify')
 gulp.task('stream', function(){
   gulp.src(['**/*'])
     .pipe(gStreamify(
-      noStreamPlugin().pipe(noStreamPlugin)
+      noStreamPlugin().pipe(noStreamPlugin2())
     ))
     .pipe(gulp.dest('/tmp'));
 });
