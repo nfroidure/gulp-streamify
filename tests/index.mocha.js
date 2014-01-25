@@ -52,7 +52,17 @@ describe('gulp-streamify', function() {
 
     it('should work', function(done) {
 
-      var stream = gStreamify(new Stream.PassThrough({objectMode: true}))
+      var pluginStream = new Stream.Transform({objectMode: true});
+
+      pluginStream._transform = function(file, unused, cb) {
+        assert(file.contents instanceof Buffer);
+        // Append some text
+        file.contents = Buffer.concat([file.contents, Buffer('test')]);
+        pluginStream.push(file);
+        cb();
+      };
+
+      var stream = gStreamify(pluginStream)
         , n = 0
         , fakeFile = new gutil.File({
           cwd: "/home/nfroidure/",
@@ -76,12 +86,12 @@ describe('gulp-streamify', function() {
         if(++n == 1) {
           assert.equal(newFile.path, "/home/nfroidure/test/file.js");
           newFile.contents.pipe(es.wait(function(err, data) {
-            assert.equal(data, 'plipplap');
+            assert.equal(data, 'plipplaptest');
           }));
         } else  {
           assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
           newFile.contents.pipe(es.wait(function(err, data) {
-            assert.equal(data, 'plopplup');
+            assert.equal(data, 'ploppluptest');
           }));
         }
       });
