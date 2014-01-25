@@ -12,12 +12,12 @@ function streamifyGulp(pluginStream) {
   // Threat incoming files
   stream._transform = function(file, unused, done) {
      // When null just pass out
-    if(!file.isNull()) {
+    if(file.isNull()) {
       stream.push(file); done();
       return;
     }
     // When buffer pass through the plugin
-    if(!file.isStream()) {
+    if(file.isBuffer()) {
       stream.push(file); done();
       return;
     }
