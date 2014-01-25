@@ -7,9 +7,9 @@ var gStreamify = require('../')
 
 describe('gulp-streamify', function() {
 
-  it('should null files through', function(done) {
+  it('should pass null files through', function(done) {
 
-      var stream = gStreamify(Stream.PassThrough)
+      var stream = gStreamify(new Stream.PassThrough({objectMode: true}))
         , n = 0
         , fakeFile = new gutil.File({
           cwd: "/home/nfroidure/",
@@ -52,7 +52,7 @@ describe('gulp-streamify', function() {
 
     it('should work', function(done) {
 
-      var stream = gStreamify(Stream.PassThrough)
+      var stream = gStreamify(new Stream.PassThrough({objectMode: true}))
         , n = 0
         , fakeFile = new gutil.File({
           cwd: "/home/nfroidure/",
@@ -100,10 +100,10 @@ describe('gulp-streamify', function() {
       fakeFile.contents.end();
 
       fakeFile2.contents.write('plop');
-
-      process.nextTick(function() {
         fakeFile2.contents.write('plup');
         fakeFile2.contents.end();
+
+      process.nextTick(function() {
       });
 
     });
@@ -114,7 +114,7 @@ describe('gulp-streamify', function() {
 
     it('should pass through', function(done) {
 
-      var stream = gStreamify(Stream.PassThrough)
+      var stream = gStreamify(new Stream.PassThrough({objectMode: true}))
         , n = 0
         , fakeFile = new gutil.File({
           cwd: "/home/nfroidure/",

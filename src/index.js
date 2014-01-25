@@ -2,7 +2,7 @@ var Stream = require('stream')
   , gutil = require('gulp-util')
 ;
 
-const PLUGIN_NAME = 'gulp-stream';
+const PLUGIN_NAME = 'gulp-streamify';
 
 // Plugin function
 function streamifyGulp(pluginStream) {
@@ -24,7 +24,7 @@ function streamifyGulp(pluginStream) {
 
     // Wrap the stream
     var originalStream = file.contents
-      , buf = new Buffer()
+      , buf = new Buffer(0)
       , bufstream = new Stream.Writable()
       , newStream = new Stream.Readable()
     ;
@@ -41,13 +41,15 @@ function streamifyGulp(pluginStream) {
     };
 
     // When buffered
-    bufstream.on('finish', function(cb) {
+    bufstream.on('finish', function() {
       // Prepare to catch back the file
       pluginStream.once('data', function(file) {
+        // Get the transformed buffer
+        buf = file.contents;
         // Write the buffer only when datas are needed
         newStream._read = function() {
           // Write the content back to the stream
-          newStream.push(file.contents);
+          newStream.push(buf);
           newStream.push(null);
         };
         // Pass the file out
@@ -58,7 +60,6 @@ function streamifyGulp(pluginStream) {
       // Send the buffer wrapped in a file
       file.contents = buf;
       pluginStream.write(file);
-      cb();
     });
 
     originalStream.pipe(bufstream);
