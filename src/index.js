@@ -18,7 +18,11 @@ function streamifyGulp(pluginStream) {
     }
     // When buffer pass through the plugin
     if(file.isBuffer()) {
-      stream.push(file); done();
+      pluginStream.once('data', function(file) {
+        stream.push(file);
+        done();
+      });
+      pluginStream.write(file);
       return;
     }
 
