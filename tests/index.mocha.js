@@ -25,15 +25,18 @@ describe('gulp-streamify', function() {
         })
       ;
 
-      stream.on('data', function(newFile){
-        assert(newFile);
-        assert.equal(newFile.cwd, "/home/nfroidure/");
-        assert.equal(newFile.base, "/home/nfroidure/test");
-        assert.equal(newFile.contents, null);
-        if(++n == 1) {
-          assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-        } else  {
-          assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
+      stream.on('readable', function() {
+        var newFile;
+        while(newFile = stream.read()) {
+          assert(newFile);
+          assert.equal(newFile.cwd, "/home/nfroidure/");
+          assert.equal(newFile.base, "/home/nfroidure/test");
+          assert.equal(newFile.contents, null);
+          if(++n == 1) {
+            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
+          } else  {
+            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
+          }
         }
       });
 
@@ -78,21 +81,25 @@ describe('gulp-streamify', function() {
         })
       ;
 
-      stream.on('data', function(newFile){
-        assert(newFile);
-        assert.equal(newFile.cwd, "/home/nfroidure/");
-        assert.equal(newFile.base, "/home/nfroidure/test");
-        assert(newFile.contents instanceof Stream);
-        if(++n == 1) {
-          assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-          newFile.contents.pipe(es.wait(function(err, data) {
-            assert.equal(data, 'plipplaptest');
-          }));
-        } else  {
-          assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-          newFile.contents.pipe(es.wait(function(err, data) {
-            assert.equal(data, 'ploppluptest');
-          }));
+
+      stream.on('readable', function() {
+        var newFile;
+        while(newFile = stream.read()) {
+          assert(newFile);
+          assert.equal(newFile.cwd, "/home/nfroidure/");
+          assert.equal(newFile.base, "/home/nfroidure/test");
+          assert(newFile.contents instanceof Stream);
+          if(++n == 1) {
+            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
+            newFile.contents.pipe(es.wait(function(err, data) {
+              assert.equal(data, 'plipplaptest');
+            }));
+          } else  {
+            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
+            newFile.contents.pipe(es.wait(function(err, data) {
+              assert.equal(data, 'ploppluptest');
+            }));
+          }
         }
       });
 
@@ -150,17 +157,21 @@ describe('gulp-streamify', function() {
         })
       ;
 
-      stream.on('data', function(newFile){
-        assert(newFile);
-        assert.equal(newFile.cwd, "/home/nfroidure/");
-        assert.equal(newFile.base, "/home/nfroidure/test");
-        assert(newFile.contents instanceof Buffer);
-        if(++n == 1) {
-          assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-          assert.equal(newFile.contents.toString(), 'plipplaptest');
-        } else  {
-          assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-          assert.equal(newFile.contents.toString(), 'plippluptest');
+
+      stream.on('readable', function() {
+        var newFile;
+        while(newFile = stream.read()) {
+          assert(newFile);
+          assert.equal(newFile.cwd, "/home/nfroidure/");
+          assert.equal(newFile.base, "/home/nfroidure/test");
+          assert(newFile.contents instanceof Buffer);
+          if(++n == 1) {
+            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
+            assert.equal(newFile.contents.toString(), 'plipplaptest');
+          } else  {
+            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
+            assert.equal(newFile.contents.toString(), 'plippluptest');
+          }
         }
       });
 
