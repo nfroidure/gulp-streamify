@@ -1,6 +1,6 @@
-.DS_Store
-*.log
-node_modules
-build
-*.node
-components
+*~
+*.swp
+node_modules/
+.git
+.coveralls.yml
+tests/results

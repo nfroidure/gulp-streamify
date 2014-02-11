@@ -1,5 +1,7 @@
-# gulp-streamify [![NPM version](https://badge.fury.io/js/gulp-streamify.png)](https://npmjs.org/package/gulp-streamify) [![Build status](https://secure.travis-ci.org/nfroidure/gulp-streamify.png)](https://travis-ci.org/nfroidure/gulp-streamify)
+# gulp-streamify
 > Wrap old [Gulp](http://gulpjs.com/) plugins to support streams.
+
+[![NPM version](https://badge.fury.io/js/gulp-streamify.png)](https://npmjs.org/package/gulp-streamify) [![Build status](https://secure.travis-ci.org/nfroidure/gulp-streamify.png)](https://travis-ci.org/nfroidure/gulp-streamify) [![Dependency Status](https://david-dm.org/nfroidure/gulp-streamify.png)](https://david-dm.org/nfroidure/gulp-streamify) [![devDependency Status](https://david-dm.org/nfroidure/gulp-streamify/dev-status.png)](https://david-dm.org/nfroidure/gulp-streamify#info=devDependencies) [![Coverage Status](https://coveralls.io/repos/nfroidure/gulp-streamify/badge.png?branch=master)](https://coveralls.io/r/nfroidure/gulp-streamify?branch=master)
 
 It is pretty annoying when Gulp plugins doesn't support streams. This plugin
  allows you to wrap them in order to use the stream mode anyway. It is pretty
