@@ -1,7 +1,7 @@
 {
   "name": "gulp-streamify",
   "description": "Wrap old plugins to support streams.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "homepage": "https://github.com/nfroidure/gulp-streamify",
   "author": {
     "name": "Nicolas Froidure",
@@ -27,7 +27,8 @@
   "scripts": {
     "test": "./node_modules/mocha/bin/mocha tests/*.mocha.js",
     "coveralls": "./node_modules/istanbul/lib/cli.js cover ./node_modules/mocha/bin/_mocha --report lcovonly -- tests/*.mocha.js -R spec -t 5000 && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage",
-    "cover": "./node_modules/istanbul/lib/cli.js cover --report html ./node_modules/mocha/bin/_mocha -- tests/*.mocha.js -R spec -t 5000"
+    "cover": "./node_modules/istanbul/lib/cli.js cover --report html ./node_modules/mocha/bin/_mocha -- tests/*.mocha.js -R spec -t 5000",
+    "trinita" : "npm-check-updates -u && npm test && git commit package.json -m \"Dependencies update\" && git push"
   },
   "keywords": [
     "gulpplugin",
@@ -44,6 +45,7 @@
     "istanbul": "~0.2.4"
   },
   "dependencies": {
-    "gulp-util": "~2.2.12"
+    "gulp-util": "~2.2.12",
+    "plexer": "0.0.1"
   }
 }
