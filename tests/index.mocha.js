@@ -51,6 +51,22 @@ describe('gulp-streamify', function() {
     
   });
 
+  it('should reemit errors', function(done) {
+
+      var passStream = new Stream.PassThrough({objectMode: true})
+        , stream = gStreamify(passStream)
+        , inputError = new Error('ich bin ein error')
+      ;
+
+      stream.on('error', function(error) {
+        assert.equal(error, inputError);
+        done();
+      });
+
+      passStream.emit('error', inputError);
+
+  });
+
   describe('in stream mode', function() {
 
     it('should work with sync streams', function(done) {

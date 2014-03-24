@@ -18,6 +18,11 @@ function streamifyGulp(pluginStream) {
     pluginStream = pluginStream();
   }
 
+  // Listening for plugin errors and reemit
+  pluginStream.on('error', function(error) {
+    duplex.emit('error', error);
+  });
+
   // Change files contents from stream to buffer and write to the plugin stream
   inputStream._transform = function(file, unused, cb) {
     // Buffering the file stream
