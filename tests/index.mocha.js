@@ -1,462 +1,318 @@
-var gStreamify = require('../')
-  , Stream = require('stream')
-  , es = require('event-stream')
-  , gutil = require('gulp-util')
-  , assert = require('assert')
-;
+var gStreamify = require('../');
+var Stream = require('stream');
+var streamtest = require('streamtest');
+var gutil = require('gulp-util');
+var assert = require('assert');
 
 describe('gulp-streamify', function() {
 
-  it('should pass null files through', function(done) {
+  // Simple plugin appending test to contents for test purposes
+  function pluginFunction() {
+    var pluginStream = new Stream.Transform({objectMode: true});
 
-      var stream = gStreamify(new Stream.PassThrough({objectMode: true}))
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: null
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: null
-        })
-      ;
+    pluginStream._transform = function(file, unused, cb) {
+      assert(file.contents instanceof Buffer);
+      file.contents = Buffer.concat([file.contents, Buffer('test')]);
+      pluginStream.push(file);
+      cb();
+    };
+    return pluginStream;
+  }
 
-      stream.on('readable', function() {
-        var newFile;
-        while(newFile = stream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert.equal(newFile.contents, null);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-          }
-        }
+  streamtest.versions.forEach(function(version) {
+
+    describe('for ' + version + ' streams', function() {
+
+      it('should pass null files through', function(done) {
+
+          gStreamify(streamtest[version].fromObjects([
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file.js",
+              contents: null,
+            }),
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file2.js",
+              contents: null,
+            }),
+          ])).pipe(streamtest[version].toObjects(function(err, objs) {
+            if(err) {
+              return done(err);
+            }
+            assert.equal(objs.length, 2);
+            done();
+          }));
+
       });
 
-      stream.on('end', function() {
-        assert.equal(n, 2);
-        done();
+      it('should reemit errors', function(done) {
+
+          var passStream = new Stream.PassThrough({objectMode: true});
+          var stream = gStreamify(passStream)
+          var inputError = new Error('ich bin ein error');
+
+          stream.on('error', function(error) {
+            assert.equal(error, inputError);
+            done();
+          });
+
+          passStream.emit('error', inputError);
+
       });
 
-      stream.write(fakeFile);
-      stream.write(fakeFile2);
-      stream.end();
-    
-  });
+      describe('in stream mode', function() {
 
-  it('should reemit errors', function(done) {
+        it('should work with sync streams and sync contents', function(done) {
 
-      var passStream = new Stream.PassThrough({objectMode: true})
-        , stream = gStreamify(passStream)
-        , inputError = new Error('ich bin ein error')
-      ;
+          var pluginStream = pluginFunction();
 
-      stream.on('error', function(error) {
-        assert.equal(error, inputError);
-        done();
-      });
+          var inputStream = new Stream.PassThrough({objectMode: true});
+          var fakeFile = new gutil.File({
+            cwd: "/home/nfroidure/",
+            base: "/home/nfroidure/test",
+            path: "/home/nfroidure/test/file.js",
+            contents: new Stream.PassThrough(),
+          });
+          var fakeFile2 = new gutil.File({
+            cwd: "/home/nfroidure/",
+            base: "/home/nfroidure/test",
+            path: "/home/nfroidure/test/file2.js",
+            contents: new Stream.PassThrough(),
+          });
 
-      passStream.emit('error', inputError);
-
-  });
-
-  describe('in stream mode', function() {
-
-    it('should work with sync streams', function(done) {
-
-      var pluginStream = new Stream.Transform({objectMode: true});
-
-      pluginStream._transform = function(file, unused, cb) {
-        assert(file.contents instanceof Buffer);
-        // Append some text
-        file.contents = Buffer.concat([file.contents, Buffer('test')]);
-        pluginStream.push(file);
-        cb();
-      };
-
-      var stream = gStreamify(pluginStream)
-        , inputStream = new Stream.PassThrough({objectMode: true})
-        , outputStream = new Stream.PassThrough({objectMode: true})
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: new Stream.PassThrough()
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: new Stream.PassThrough()
-        })
-      ;
-      
-      inputStream
-        .pipe(stream)
-        .pipe(outputStream);
-
-
-      outputStream.on('readable', function() {
-        var newFile;
-        while(newFile = outputStream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert(newFile.contents instanceof Stream);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'plipplaptest');
+          inputStream
+            .pipe(gStreamify(pluginStream))
+            .pipe(streamtest[version].toObjects(function(err, files) {
+              if(err) {
+                return done(err);
+              }
+              assert.equal(files.length, 2);
+              assert.equal(files[0].cwd, "/home/nfroidure/");
+              assert.equal(files[0].base, "/home/nfroidure/test");
+              assert.equal(files[0].path, "/home/nfroidure/test/file.js");
+              assert.equal(files[1].cwd, "/home/nfroidure/");
+              assert.equal(files[1].base, "/home/nfroidure/test");
+              assert.equal(files[1].path, "/home/nfroidure/test/file2.js");
+              files[0].pipe(streamtest[version].toText(function(err, text) {
+                if(err) {
+                  return done(err);
+                }
+                assert.equal(text, 'plipplaptest');
+                files[1].pipe(streamtest[version].toText(function(err, text) {
+                  if(err) {
+                    return done(err);
+                  }
+                  assert.equal(text, 'ploppluptest');
+                  done();
+                }));
+              }));
             }));
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'ploppluptest');
-            }));
-          }
-        }
-      });
 
-      outputStream.on('end', function() {
-        assert.equal(n, 2);
-        done();
-      });
-
-      stream.write(fakeFile);
-      stream.write(fakeFile2);
-      stream.end();
-
-      fakeFile.contents.write('plip');
-      fakeFile.contents.write('plap');
-      fakeFile.contents.end();
-
-      fakeFile2.contents.write('plop');
-      fakeFile2.contents.write('plup');
-      fakeFile2.contents.end();
-
-    });
-
-    it('should work with async contents streams', function(done) {
-
-      var pluginStream = new Stream.Transform({objectMode: true});
-
-      pluginStream._transform = function(file, unused, cb) {
-        assert(file.contents instanceof Buffer);
-        // Append some text
-        file.contents = Buffer.concat([file.contents, Buffer('test')]);
-        pluginStream.push(file);
-        cb();
-      };
-
-      var stream = gStreamify(pluginStream)
-        , inputStream = new Stream.PassThrough({objectMode: true})
-        , outputStream = new Stream.PassThrough({objectMode: true})
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: new Stream.PassThrough()
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: new Stream.PassThrough()
-        })
-      ;
-      
-      inputStream
-        .pipe(stream)
-        .pipe(outputStream);
-
-
-      outputStream.on('readable', function() {
-        var newFile;
-        while(newFile = outputStream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert(newFile.contents instanceof Stream);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'plipplaptest');
-            }));
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'ploppluptest');
-            }));
-          }
-        }
-      });
-
-      outputStream.on('end', function() {
-        assert.equal(n, 2);
-        done();
-      });
-
-      inputStream.write(fakeFile);
-      inputStream.write(fakeFile2);
-      inputStream.end();
-
-      setImmediate(function() {
-        fakeFile.contents.write('plip');
-        setImmediate(function() {
-          fakeFile.contents.write('plap');
-          fakeFile.contents.end();
-        });
-      });
-
-      setImmediate(function() {
-        fakeFile2.contents.write('plop');
-        setImmediate(function() {
-          fakeFile2.contents.write('plup');
-          fakeFile2.contents.end();
-        });
-      });
-
-    });
-
-    it('should work with async files streams', function(done) {
-
-      var pluginStream = new Stream.Transform({objectMode: true});
-
-      pluginStream._transform = function(file, unused, cb) {
-        assert(file.contents instanceof Buffer);
-        // Append some text
-        file.contents = Buffer.concat([file.contents, Buffer('test')]);
-        pluginStream.push(file);
-        cb();
-      };
-
-      var stream = gStreamify(pluginStream)
-        , inputStream = new Stream.PassThrough({objectMode: true})
-        , outputStream = new Stream.PassThrough({objectMode: true})
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: new Stream.PassThrough()
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: new Stream.PassThrough()
-        })
-      ;
-      
-      inputStream
-        .pipe(stream)
-        .pipe(outputStream);
-
-
-      outputStream.on('readable', function() {
-        var newFile;
-        while(newFile = outputStream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert(newFile.contents instanceof Stream);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'plipplaptest');
-            }));
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'ploppluptest');
-            }));
-          }
-        }
-      });
-
-      outputStream.on('end', function() {
-        assert.equal(n, 2);
-        done();
-      });
-
-      setImmediate(function() {
-        inputStream.write(fakeFile);
-        fakeFile.contents.write('plip');
-        setImmediate(function() {
-          fakeFile.contents.write('plap');
-          fakeFile.contents.end();
-        });
-
-        setImmediate(function() {
+          inputStream.write(fakeFile);
           inputStream.write(fakeFile2);
           inputStream.end();
-          fakeFile2.contents.write('plop');
-          setImmediate(function() {
-            fakeFile2.contents.write('plup');
-            fakeFile2.contents.end();
-          });
-        });
-      });
 
-    });
-
-    it('should work with plugin function provinding async files streams', function(done) {
-
-      pluginFunction = function() {
-        var pluginStream = new Stream.Transform({objectMode: true});
-
-        pluginStream._transform = function(file, unused, cb) {
-          assert(file.contents instanceof Buffer);
-          // Append some text
-          file.contents = Buffer.concat([file.contents, Buffer('test')]);
-          pluginStream.push(file);
-          cb();
-        };
-        setImmediate(function() {
-          inputStream.write(fakeFile);
           fakeFile.contents.write('plip');
-          setImmediate(function() {
-            fakeFile.contents.write('plap');
-            fakeFile.contents.end();
-          });
+          fakeFile.contents.write('plap');
+          fakeFile.contents.end();
 
-          setImmediate(function() {
-            inputStream.write(fakeFile2);
-            inputStream.end();
-            fakeFile2.contents.write('plop');
-            setImmediate(function() {
-              fakeFile2.contents.write('plup');
-              fakeFile2.contents.end();
-            });
-          });
+          fakeFile2.contents.write('plop');
+          fakeFile2.contents.write('plup');
+          fakeFile2.contents.end();
+
         });
-        return pluginStream;
-      }
 
-      var stream = gStreamify(pluginFunction)
-        , inputStream = new Stream.PassThrough({objectMode: true})
-        , outputStream = new Stream.PassThrough({objectMode: true})
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: new Stream.PassThrough()
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: new Stream.PassThrough()
-        })
-      ;
-      
-      inputStream
-        .pipe(stream)
-        .pipe(outputStream);
+        it('should work with sync streams and async contents', function(done) {
 
+          var pluginStream = pluginFunction();
 
-      outputStream.on('readable', function() {
-        var newFile;
-        while(newFile = outputStream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert(newFile.contents instanceof Stream);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'plipplaptest');
+          var inputStream = new Stream.PassThrough({objectMode: true});
+          var fakeFile = new gutil.File({
+            cwd: "/home/nfroidure/",
+            base: "/home/nfroidure/test",
+            path: "/home/nfroidure/test/file.js",
+            contents: streamtest.v2.fromChunks(['plip', 'plap']),
+          });
+          var fakeFile2 = new gutil.File({
+            cwd: "/home/nfroidure/",
+            base: "/home/nfroidure/test",
+            path: "/home/nfroidure/test/file2.js",
+            contents: streamtest.v2.fromChunks(['plop', 'plup']),
+          });
+
+          inputStream
+            .pipe(gStreamify(pluginStream))
+            .pipe(streamtest[version].toObjects(function(err, files) {
+              if(err) {
+                return done(err);
+              }
+              assert.equal(files.length, 2);
+              assert.equal(files[0].cwd, "/home/nfroidure/");
+              assert.equal(files[0].base, "/home/nfroidure/test");
+              assert.equal(files[0].path, "/home/nfroidure/test/file.js");
+              assert.equal(files[1].cwd, "/home/nfroidure/");
+              assert.equal(files[1].base, "/home/nfroidure/test");
+              assert.equal(files[1].path, "/home/nfroidure/test/file2.js");
+              files[0].pipe(streamtest[version].toText(function(err, text) {
+                if(err) {
+                  return done(err);
+                }
+                assert.equal(text, 'plipplaptest');
+                files[1].pipe(streamtest[version].toText(function(err, text) {
+                  if(err) {
+                    return done(err);
+                  }
+                  assert.equal(text, 'ploppluptest');
+                  done();
+                }));
+              }));
             }));
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-            newFile.contents.pipe(es.wait(function(err, data) {
-              assert.equal(data, 'ploppluptest');
+
+          inputStream.write(fakeFile);
+          inputStream.write(fakeFile2);
+          inputStream.end();
+
+        });
+
+        it('should work with async streams and async contents', function(done) {
+
+          var pluginStream = pluginFunction();
+
+            streamtest[version].fromObjects([
+              new gutil.File({
+                cwd: "/home/nfroidure/",
+                base: "/home/nfroidure/test",
+                path: "/home/nfroidure/test/file.js",
+                contents: streamtest.v2.fromChunks(['plip', 'plap'])
+              }),
+              new gutil.File({
+                cwd: "/home/nfroidure/",
+                base: "/home/nfroidure/test",
+                path: "/home/nfroidure/test/file2.js",
+                contents: streamtest.v2.fromChunks(['plip', 'plup'])
+              }),
+            ])
+            .pipe(gStreamify(pluginStream))
+            .pipe(streamtest[version].toObjects(function(err, files) {
+              if(err) {
+                return done(err);
+              }
+              assert.equal(files.length, 2);
+              assert.equal(files[0].cwd, "/home/nfroidure/");
+              assert.equal(files[0].base, "/home/nfroidure/test");
+              assert.equal(files[0].path, "/home/nfroidure/test/file.js");
+              assert.equal(files[1].cwd, "/home/nfroidure/");
+              assert.equal(files[1].base, "/home/nfroidure/test");
+              assert.equal(files[1].path, "/home/nfroidure/test/file2.js");
+              files[0].pipe(streamtest[version].toText(function(err, text) {
+                if(err) {
+                  return done(err);
+                }
+                assert.equal(text, 'plipplaptest');
+                files[1].pipe(streamtest[version].toText(function(err, text) {
+                  if(err) {
+                    return done(err);
+                  }
+                  assert.equal(text, 'plippluptest');
+                  done();
+                }));
+              }));
             }));
-          }
-        }
+
+        });
+
+        it('should work with plugin function provinding async files streams', function(done) {
+
+          streamtest[version].fromObjects([
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file.js",
+              contents: streamtest.v2.fromChunks(['plip', 'plap'])
+            }),
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file2.js",
+              contents: streamtest.v2.fromChunks(['plip', 'plup'])
+            }),
+          ])
+          .pipe(gStreamify(pluginFunction))
+          .pipe(streamtest[version].toObjects(function(err, files) {
+            if(err) {
+              return done(err);
+            }
+            assert.equal(files.length, 2);
+            assert.equal(files[0].cwd, "/home/nfroidure/");
+            assert.equal(files[0].base, "/home/nfroidure/test");
+            assert.equal(files[0].path, "/home/nfroidure/test/file.js");
+            assert.equal(files[1].cwd, "/home/nfroidure/");
+            assert.equal(files[1].base, "/home/nfroidure/test");
+            assert.equal(files[1].path, "/home/nfroidure/test/file2.js");
+            files[0].pipe(streamtest[version].toText(function(err, text) {
+              if(err) {
+                return done(err);
+              }
+              assert.equal(text, 'plipplaptest');
+              files[1].pipe(streamtest[version].toText(function(err, text) {
+                if(err) {
+                  return done(err);
+                }
+                assert.equal(text, 'plippluptest');
+                done();
+              }));
+            }));
+          }));
+
+        });
+
       });
 
-      outputStream.on('end', function() {
-        assert.equal(n, 2);
-        done();
+      describe('in buffer mode', function() {
+
+        it('should work', function(done) {
+
+          var pluginStream = pluginFunction();
+
+          streamtest[version].fromObjects([
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file.js",
+              contents: new Buffer('plipplap')
+            }),
+            new gutil.File({
+              cwd: "/home/nfroidure/",
+              base: "/home/nfroidure/test",
+              path: "/home/nfroidure/test/file2.js",
+              contents: new Buffer('plipplup')
+            }),
+          ])
+          .pipe(gStreamify(pluginStream))
+          .pipe(streamtest[version].toObjects(function(err, files) {
+            if(err) {
+              return done(err);
+            }
+            assert.equal(files.length, 2);
+            assert.equal(files[0].cwd, "/home/nfroidure/");
+            assert.equal(files[0].base, "/home/nfroidure/test");
+            assert(files[0].contents instanceof Buffer);
+            assert.equal(files[0].path, "/home/nfroidure/test/file.js");
+            assert.equal(files[0].contents.toString(), 'plipplaptest');
+            assert.equal(files[1].cwd, "/home/nfroidure/");
+            assert.equal(files[1].base, "/home/nfroidure/test");
+            assert(files[1].contents instanceof Buffer);
+            assert.equal(files[1].path, "/home/nfroidure/test/file2.js");
+            assert.equal(files[1].contents.toString(), 'plippluptest');
+            done();
+          }));
+
+        });
+
       });
-
-    });
-
-  });
-
-  describe('in buffer mode', function() {
-
-    it('should work', function(done) {
-
-      var pluginStream = new Stream.Transform({objectMode: true});
-
-      pluginStream._transform = function(file, unused, cb) {
-        assert(file.contents instanceof Buffer);
-        // Append some text
-        file.contents = Buffer.concat([file.contents, Buffer('test')]);
-        pluginStream.push(file);
-        cb();
-      };
-
-      var stream = gStreamify(pluginStream)
-        , inputStream = new Stream.PassThrough({objectMode: true})
-        , outputStream = new Stream.PassThrough({objectMode: true})
-        , n = 0
-        , fakeFile = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file.js",
-          contents: new Buffer('plipplap')
-        })
-        , fakeFile2 = new gutil.File({
-          cwd: "/home/nfroidure/",
-          base: "/home/nfroidure/test",
-          path: "/home/nfroidure/test/file2.js",
-          contents: new Buffer('plipplup')
-        })
-      ;
-      
-      inputStream
-        .pipe(stream)
-        .pipe(outputStream);
-
-
-      outputStream.on('readable', function() {
-        var newFile;
-        while(newFile = outputStream.read()) {
-          assert(newFile);
-          assert.equal(newFile.cwd, "/home/nfroidure/");
-          assert.equal(newFile.base, "/home/nfroidure/test");
-          assert(newFile.contents instanceof Buffer);
-          if(++n == 1) {
-            assert.equal(newFile.path, "/home/nfroidure/test/file.js");
-            assert.equal(newFile.contents.toString(), 'plipplaptest');
-          } else  {
-            assert.equal(newFile.path, "/home/nfroidure/test/file2.js");
-            assert.equal(newFile.contents.toString(), 'plippluptest');
-          }
-        }
-      });
-
-      outputStream.on('end', function() {
-        assert.equal(n, 2);
-        done();
-      });
-
-      inputStream.write(fakeFile);
-      inputStream.write(fakeFile2);
-      inputStream.end();
 
     });
 
