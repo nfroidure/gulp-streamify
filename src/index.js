@@ -1,17 +1,14 @@
 'use strict';
 
 var Stream = require('stream');
-var gutil = require('gulp-util');
 var Duplexer = require('plexer');
-
-var PLUGIN_NAME = 'gulp-streamify';
 
 // Plugin function
 function streamifyGulp(pluginStream) {
 
-  var inputStream = new Stream.Transform({objectMode: true});
-  var outputStream = new Stream.Transform({objectMode: true});
-  var duplex = new Duplexer({objectMode: true}, inputStream, outputStream);
+  var inputStream = new Stream.Transform({ objectMode: true });
+  var outputStream = new Stream.Transform({ objectMode: true });
+  var duplex = new Duplexer({ objectMode: true }, inputStream, outputStream);
 
   // Accepting functions returning streams
   if('function' === typeof pluginStream) {
@@ -26,7 +23,10 @@ function streamifyGulp(pluginStream) {
   // Change files contents from stream to buffer and write to the plugin stream
   inputStream._transform = function(file, unused, cb) {
     // Buffering the file stream
-    var originalStream, buf, bufstream;
+    var originalStream;
+    var buf;
+    var bufstream;
+
     if(file.isNull() || file.isBuffer()) {
       inputStream.push(file);
       return cb();
@@ -37,9 +37,9 @@ function streamifyGulp(pluginStream) {
     bufstream = new Stream.Writable();
 
     // Buffer the stream
-    bufstream._write = function(chunk, encoding, cb) {
+    bufstream._write = function(chunk, encoding, cb2) {
       buf = Buffer.concat([buf, chunk], buf.length + chunk.length);
-      cb();
+      cb2();
     };
 
     // When buffered
@@ -56,7 +56,9 @@ function streamifyGulp(pluginStream) {
 
   // Change files contents from buffer to stream and write to the output stream
   outputStream._transform = function(file, unused, cb) {
-    var buf, newStream;
+    var buf;
+    var newStream;
+
     if(file.isNull() || !file.wasStream) {
       outputStream.push(file);
       return cb();
