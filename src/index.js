@@ -1,20 +1,20 @@
-var Stream = require('stream')
-  , gutil = require('gulp-util')
-  , Duplexer = require('plexer')
-;
+'use strict';
 
-const PLUGIN_NAME = 'gulp-streamify';
+var Stream = require('stream');
+var gutil = require('gulp-util');
+var Duplexer = require('plexer');
+
+var PLUGIN_NAME = 'gulp-streamify';
 
 // Plugin function
 function streamifyGulp(pluginStream) {
 
-  var inputStream = new Stream.Transform({objectMode: true})
-    , outputStream = new Stream.Transform({objectMode: true})
-    , duplex = new Duplexer({objectMode: true}, inputStream, outputStream)
-  ;
+  var inputStream = new Stream.Transform({objectMode: true});
+  var outputStream = new Stream.Transform({objectMode: true});
+  var duplex = new Duplexer({objectMode: true}, inputStream, outputStream);
 
   // Accepting functions returning streams
-  if('function' == typeof pluginStream) {
+  if('function' === typeof pluginStream) {
     pluginStream = pluginStream();
   }
 
@@ -95,4 +95,3 @@ function streamifyGulp(pluginStream) {
 
 // Export the plugin main function
 module.exports = streamifyGulp;
-
