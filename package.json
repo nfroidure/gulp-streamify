@@ -41,6 +41,7 @@
   ],
   "devDependencies": {
     "coveralls": "~2.8.0",
+    "gulp-util": "~2.2.14",
     "eslint": "^1.0.0",
     "istanbul": "~0.2.4",
     "mocha": "~1.17.1",
@@ -49,7 +50,6 @@
     "streamtest": "^1.2.1"
   },
   "dependencies": {
-    "gulp-util": "~2.2.14",
     "plexer": "0.0.1"
   }
 }
