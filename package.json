@@ -40,16 +40,16 @@
     "wrapper"
   ],
   "devDependencies": {
-    "coveralls": "~2.8.0",
-    "gulp-util": "~2.2.14",
+    "coveralls": "~2.11.3",
+    "gulp-util": "~3.0.6",
     "eslint": "^1.0.0",
-    "istanbul": "~0.2.4",
-    "mocha": "~1.17.1",
-    "mocha-lcov-reporter": "0.0.1",
+    "istanbul": "~0.3.17",
+    "mocha": "~2.2.5",
+    "mocha-lcov-reporter": "0.0.2",
     "sf-lint": "^1.0.2",
     "streamtest": "^1.2.1"
   },
   "dependencies": {
-    "plexer": "0.0.1"
+    "plexer": "0.0.3"
   }
 }
