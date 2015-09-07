@@ -1,3 +1,5 @@
+/* eslint max-nested-callbacks:[1] */
+
 'use strict';
 
 var gStreamify = require('../');

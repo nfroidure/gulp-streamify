@@ -79,12 +79,14 @@ function streamifyGulp(pluginStream) {
     cb();
   };
   outputStream._flush = function(cb) {
+    setImmediate(function() {
+      // Old streams WTF
+      if(!pluginStream._readableState) {
+        outputStream.emit('end');
+        duplex.emit('end');
+      }
+    });
     cb();
-    // Old streams WTF
-    if(!pluginStream._readableState) {
-      outputStream.emit('end');
-      duplex.emit('end');
-    }
   };
 
   inputStream
